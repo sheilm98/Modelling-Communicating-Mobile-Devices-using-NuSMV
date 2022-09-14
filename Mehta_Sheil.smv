@@ -1,0 +1,71 @@
+MODULE car(switch)
+VAR
+    talk: boolean;
+    --status: {tr1, tr2};
+ASSIGN
+    init(talk):= !switch;
+    next(talk):=
+    case
+        switch = TRUE : FALSE;
+        switch = FALSE : TRUE;
+        --TRUE : TRUE;
+    esac;
+--FAIRNESS switch != talk
+FAIRNESS running
+SPEC AG !(switch = talk)
+
+--MODULE car2
+
+MODULE control(talk)
+VAR
+    transmitter: {tr1,tr2};
+    switch: boolean;
+ASSIGN
+    init(switch):= {TRUE, FALSE};
+    init(transmitter):= tr1;
+    next(switch):=
+    case
+        talk = TRUE : FALSE;
+        talk = FALSE : TRUE;
+    esac;
+    next(transmitter):= 
+    case
+        switch = TRUE & transmitter = tr1 : tr2;
+        switch = TRUE & transmitter = tr2 : tr1;
+        TRUE : transmitter;
+    esac;
+FAIRNESS running
+SPEC AG(switch = TRUE & transmitter=tr1) -> AX (transmitter = tr2)
+SPEC AG(switch = TRUE & transmitter=tr2) -> AX (transmitter = tr1)
+---
+---
+SPEC EG(switch=TRUE)
+
+MODULE transmitter(talk, switch, curr, name)
+VAR
+    --status: boolean; 
+    stat : boolean;
+ASSIGN
+    init(stat) := {TRUE,FALSE};
+    next(stat):=
+    case
+        curr = name : TRUE;
+        TRUE : FALSE;
+    esac;
+
+FAIRNESS running
+SPEC AF(curr = name -> AX stat = TRUE)
+
+--MODULE transmitter2
+
+
+MODULE main
+VAR 
+    ctrl: process control(cr.talk);
+    cr : process car(ctrl.switch);
+    --
+    trans1 : process transmitter(cr.talk ,ctrl.switch , ctrl.transmitter, tr1);
+    trans2 : process transmitter(cr.talk , ctrl.switch, ctrl.transmitter, tr2);
+
+FAIRNESS trans1.stat = TRUE & trans2.stat = FALSE
+FAIRNESS trans1.stat = FALSE & trans2.stat = TRUE
